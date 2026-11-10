@@ -12,14 +12,25 @@ NVCC="${NVCC:-$(command -v nvcc || echo /usr/local/cuda/bin/nvcc)}"
 # the compiler's real path: CMake throws its whole cache away (and every object is compiled again) when the path
 # changes, and /usr/local/cuda/bin/nvcc and /usr/local/cuda-13.0/bin/nvcc are the same compiler through a symlink
 NVCC="$(readlink -f "$NVCC" 2>/dev/null || echo "$NVCC")"
-B=../../build-cuda/cmake
+OUT=../../build-cuda
+set --
+if [ "${MOMOE_MAXWELL:-0}" = 1 ]; then
+    OUT=../../build-cuda-sm52
+    JOBS="${JOBS:-2}"
+    set -- -DMOMOE_EXPERIMENTAL_SM52=ON
+fi
+B=$OUT/cmake
 PORT=""
 if [ -n "${MOMOE_PORTABLE:-}" ]; then
   PORT="-DGGML_NATIVE=OFF"
   [ "$(uname -m)" = aarch64 ] && PORT="$PORT -DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16+i8mm"
 fi
-mkdir -p ../../build-cuda
+mkdir -p "$OUT"
 cmake -S . -B $B -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CUDA_COMPILER="$NVCC" \
-    -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHS:-native}" $PORT > $B.configure.log 2>&1 || { tail -20 $B.configure.log; exit 1; }
+    -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHS:-native}" $PORT "$@" > $B.configure.log 2>&1 || { tail -20 $B.configure.log; exit 1; }
 cmake --build $B -j "${JOBS:-$(nproc)}" --target momoe-cuda > $B.build.log 2>&1 || { grep -E "error|Error" $B.build.log | head -30; exit 1; }
-rm -f ../../build-cuda/momoe-cuda && cp $B/momoe-cuda ../../build-cuda/momoe-cuda
+rm -f "$OUT/momoe-cuda" && cp $B/momoe-cuda "$OUT/momoe-cuda"
+if [ "${MOMOE_MAXWELL:-0}" = 1 ]; then
+    cmake --build $B -j "${JOBS:-2}" --target momoe-cuda-sm52-check >> $B.build.log 2>&1 || { tail -20 $B.build.log; exit 1; }
+    cp $B/momoe-cuda-sm52-check "$OUT/momoe-cuda-sm52-check"
+fi

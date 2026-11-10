@@ -256,6 +256,8 @@ Each with the number it was measured at; details and switches in [design/benchma
 
 ## Install
 
+For the opt-in CUDA 12 Maxwell SM52 source build and its bounded correctness check, see [experimental Maxwell instructions](docs/Use-Maxwell.md). This does not establish full-model support or performance.
+
 You need:
 - an NVIDIA card, RTX 20 series or newer, or an Apple Silicon Mac;
 - enough RAM for the model;
