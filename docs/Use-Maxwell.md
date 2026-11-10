@@ -29,4 +29,20 @@ This check does not establish full-model compatibility, capacity or performance.
 
 ## Validation status
 
-The source build and actual SM52 checks are pending. No successful M4000 inference or numerical result is claimed by this document yet.
+One run, dated 2026-11-10, on a Quadro M4000 (compute capability 5.2, 8114 MiB) inside an Ubuntu 24.04 container
+with CUDA 12.9.1 (nvcc 12.9.86) and driver 580.196.07:
+
+- the build above produced `build-cuda-sm52/momoe-cuda` and the check;
+- `momoe-cuda-sm52-check` passed all ten matrix cases (largest absolute error 1.90734863e-06, `q4_K` at four columns,
+  every other case exact against the CPU reference) and both mailbox cases;
+- before the mailbox polling fix the same source failed to compile for SM52 with `identifier "__nanosleep" is
+  undefined`, and after it the check passed; configuring with CUDA 13 was rejected at CMake time;
+- one bounded model case: `Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf` with `--ctx 256 --pool-gib 0.25 --mtp 0` loaded
+  (2.49 GiB dense weights, 0.75 GiB expert pool across 3 format groups), read a 25-token prompt at 3.3 tok/s
+  and generated 4 tokens at 2.3 tok/s, ending in the model's end-of-sequence token;
+- the `--serve` pipe protocol answered `READY 256 stop` and completed one `GEN` request on the same card,
+  stopping at end of sequence.
+
+What this does not claim: throughput or capacity figures worth comparing, concurrency, long runs, a serving
+qualification, or that CUDA 13 builds - CUDA 13 removed Maxwell compilation, and no CUDA 13 result exists for
+this path. These were single bounded checks on one card, not a benchmark.
