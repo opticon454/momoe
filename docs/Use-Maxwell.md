@@ -23,6 +23,8 @@ Stop competing GPU work through its normal controller before testing. First run 
 
 The check evaluates ten small matrix products: F32, F16, Q4_0, Q4_K and Q6_K, each with one and four input columns. CUDA results must match a scalar CPU reference within the stated absolute-plus-relative tolerance. It exits nonzero for another GPU architecture, unsupported operations, non-finite results or a numerical mismatch. It performs no throughput loop and loads no model.
 
+Two mapped-memory mailbox checks also verify GPU-to-CPU payload visibility and CPU-to-GPU wakeups, with the completion flag already set and with a delayed host response. The host wait has a five-second deadline; the production GPU wait retains its existing clock-based timeout and memory fences. Pre-SM70 devices poll without the unsupported `__nanosleep` instruction.
+
 This check does not establish full-model compatibility, capacity or performance. A model must still use an architecture supported by Momoe's own engine and fit its dense weights, KV state and working buffers into available memory. Validate a small, bounded model case separately before exposing a serving profile. Do not label an unloaded API as proof of successful inference.
 
 ## Validation status

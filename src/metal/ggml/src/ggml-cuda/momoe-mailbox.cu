@@ -35,7 +35,9 @@ static __global__ void momoe_mb_wait(const volatile uint32_t * mb_f32, uint32_t 
         const long long t0 = clock64();
         ok = 1;
         while (*flag != want) {
+#if __CUDA_ARCH__ >= 700
             __nanosleep(200);
+#endif
             if (clock64() - t0 > 40000000000LL) {          // ~20 s at 2 GHz: the CPU never answered
                 *timeout = 1;
                 ok = 0;
